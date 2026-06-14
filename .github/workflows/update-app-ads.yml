@@ -1,69 +1,36 @@
-name: Update app-ads.txt
+name: Auto Update app-ads.txt
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # every 6 hours
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    - cron: '0 */6 * * *' # প্রতি ৬ ঘণ্টা পর পর চেক করবে
+  workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
 
 jobs:
-  update:
+  update-ads:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
 
-      - name: Fetch upstream app-ads.txt
+      - name: Fetch and Merge app-ads.txt
         run: |
-          set -e
-          UPSTREAM_URL='https://raw.githubusercontent.com/cleveradssolutions/App-ads.txt/refs/heads/main/app-ads.txt'
-          mkdir -p tmp
-          if curl -fsSL "$UPSTREAM_URL" > tmp/remote_app_ads.txt; then
-            echo "Fetched upstream file"
-          else
-            echo "Upstream file not found or error fetching" >&2
-            exit 0
-          fi
+          # আপনার নিজস্ব AdMob তথ্য
+          MY_ADS_LINE="google.com, pub-8385001660731549, DIRECT, f08c47fec0942fa0"
+          
+          # উৎস ফাইল থেকে ডেটা সংগ্রহ করা
+          curl -s https://raw.githubusercontent.com/cleveradssolutions/App-ads.txt/refs/heads/main/app-ads.txt -o remote-ads.txt
+          
+          # নতুন ফাইল তৈরি: প্রথমে আপনার লাইন, তারপর বাকিগুলো
+          echo "$MY_ADS_LINE" > app-ads.txt
+          cat remote-ads.txt >> app-ads.txt
+          
+          # সাময়িক ফাইল মুছে ফেলা
+          rm remote-ads.txt
 
-      - name: Build app-ads.txt with admob first
-        env:
-          ADMOB_LINE: 'google.com, pub-8385001660731549, DIRECT, f08c47fec0942fa0'
+      - name: Commit and Push if changed
         run: |
-          set -e
-          REMOTE=tmp/remote_app_ads.txt
-          TARGET=app-ads.txt
-
-          if [ ! -s "$REMOTE" ]; then
-            echo "Upstream file is empty; creating file with admob line only"
-            printf '%s\n' "$ADMOB_LINE" > "$TARGET"
-          else
-            # Remove any existing identical admob line from the upstream file, then prepend our admob line
-            grep -v -xF -- "$ADMOB_LINE" "$REMOTE" > tmp/remote_no_admob.txt || true
-            printf '%s\n' "$ADMOB_LINE" > "$TARGET"
-            cat tmp/remote_no_admob.txt >> "$TARGET"
-          fi
-
-          # Ensure file ends with a single newline
-          sed -i -e '$a\' "$TARGET"
-
-      - name: Commit & push if changed
-        run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add app-ads.txt
-          # If there are no staged changes, exit
-          if git diff --staged --quiet; then
-            echo "No changes to app-ads.txt"
-            exit 0
-          fi
-
-          git commit -m "chore: update app-ads.txt from upstream (cleveradssolutions) [ci skip]" || true
-          git push
-          echo "app-ads.txt updated and pushed"
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update app-ads.txt from source" && git push)
