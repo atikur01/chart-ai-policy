@@ -1,9 +1,9 @@
 name: Auto Update app-ads.txt
 
 on:
+workflow_dispatch:
 schedule:
 - cron: '0 */6 * * *'
-workflow_dispatch:
 
 jobs:
 update:
@@ -11,32 +11,31 @@ runs-on: ubuntu-latest
 
 ```
 steps:
-  - name: Checkout Repository
+  - name: Checkout repository
     uses: actions/checkout@v4
 
-  - name: Download Latest app-ads.txt
+  - name: Download latest app-ads.txt
     run: |
-      curl -L \
-      https://raw.githubusercontent.com/cleveradssolutions/App-ads.txt/main/app-ads.txt \
-      -o app-ads.txt
+      curl -L "https://raw.githubusercontent.com/cleveradssolutions/App-ads.txt/main/app-ads.txt" -o app-ads.txt
 
-  - name: Add My AdMob Publisher
+  - name: Append AdMob publisher if missing
     run: |
       MY_LINE="google.com, pub-8385001660731549, DIRECT, f08c47fec0942fa0"
 
       if ! grep -Fxq "$MY_LINE" app-ads.txt; then
-        echo "" >> app-ads.txt
-        echo "$MY_LINE" >> app-ads.txt
+        printf "\n%s\n" "$MY_LINE" >> app-ads.txt
       fi
 
-  - name: Commit Changes
+  - name: Commit and push changes
     run: |
       git config user.name "github-actions[bot]"
       git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       git add app-ads.txt
 
-      if ! git diff --cached --quiet; then
+      if git diff --cached --quiet; then
+        echo "No changes detected"
+      else
         git commit -m "Auto update app-ads.txt"
         git push
       fi
