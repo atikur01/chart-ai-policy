@@ -1,6 +1,9 @@
 name: Auto Update app-ads.txt
 
 on:
+  push:
+    branches:
+      - main # আপনার মেইন ব্রাঞ্চের নাম অনুযায়ী পরিবর্তন করতে পারেন (যেমন: main অথবা master)
   schedule:
     - cron: '0 */6 * * *' # প্রতি ৬ ঘণ্টা পর পর চেক করবে
   workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
@@ -33,4 +36,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add app-ads.txt
+          
+          # যদি কোনো পরিবর্তন থাকে তবেই কেবল নতুন করে অটো-কমিট করবে
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update app-ads.txt from source" && git push)
