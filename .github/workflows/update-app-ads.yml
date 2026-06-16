@@ -8,7 +8,6 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
-# বটের জন্য রাইট পারমিশন যুক্ত করা হলো
 permissions:
   contents: write
 
@@ -23,14 +22,36 @@ jobs:
       - name: Fetch and Merge app-ads.txt
         run: |
           MY_ADS_LINE="google.com, pub-8385001660731549, DIRECT, f08c47fec0942fa0"
+
           curl -s https://raw.githubusercontent.com/cleveradssolutions/App-ads.txt/refs/heads/main/app-ads.txt -o remote-ads.txt
+
+          # Create fresh file
           echo "$MY_ADS_LINE" > app-ads.txt
+
+          # Add contents from Monitize Media.txt
+          if [ -f "Monitize Media.txt" ]; then
+            echo "" >> app-ads.txt
+            cat "Monitize Media.txt" >> app-ads.txt
+          fi
+
+          # Add remote source
+          echo "" >> app-ads.txt
           cat remote-ads.txt >> app-ads.txt
-          rm remote-ads.txt
+
+          rm -f remote-ads.txt
+
+          # Remove duplicate lines and empty lines
+          awk 'NF && !seen[$0]++' app-ads.txt > temp.txt
+          mv temp.txt app-ads.txt
 
       - name: Commit and Push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git add app-ads.txt
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update app-ads.txt from source" && git push)
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto-update app-ads.txt from source"
+            git push
+          fi
